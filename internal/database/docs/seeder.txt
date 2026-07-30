@@ -1,0 +1,26 @@
+Command Seeder
+
+1. Membuat seeder baru:
+
+go run cmd/seed/main.go create user_seeder
+
+Ini akan membuat 1 file di internal/database/seeders/:
+000001_user_seeder.go (berisi fungsi SeedUserSeeder dan RollbackUserSeeder)
+
+Tambahkan manual entry-nya ke allSeeders di cmd/seed/main.go:
+{Name: "000001_user_seeder", Up: seeders.SeedUserSeeder, Down: seeders.RollbackUserSeeder}
+
+2. Menjalankan semua pending seeders:
+
+go run cmd/seed/main.go seed
+
+Jalankan semua seeder di allSeeders yang belum dijalankan
+Akan merekam di tabel seeders yang sudah dijalankan
+Seeder yang sudah ada akan diskip otomatis
+
+3. Rollback seeder terakhir:
+
+go run cmd/seed/main.go down
+
+Jalankan fungsi Down dari seeder terakhir
+Hapus recordnya dari tabel seeders

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>WebSocket Chat - Belajar</title>
+</head>
+
+<body>
+    <h3>Chat Test</h3>
+    <input id="msg" placeholder="ketik pesan..." />
+    <button onclick="send()">Kirim</button>
+    <ul id="messages"></ul>
+
+    <script>
+        const socket = new WebSocket("ws://localhost:8084/ws/testing");
+
+        socket.onmessage = (event) => {
+            const li = document.createElement("li");
+            li.textContent = event.data;
+            document.getElementById("messages").appendChild(li);
+        };
+
+        socket.onopen = () => console.log("Terhubung ke server!");
+        socket.onclose = () => console.log("Koneksi terputus.");
+
+        function send() {
+            const input = document.getElementById("msg");
+            socket.send(input.value);
+            input.value = "";
+        }
+    </script>
+</body>
+
+</html>

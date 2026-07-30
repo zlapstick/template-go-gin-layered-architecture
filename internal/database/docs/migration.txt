@@ -1,0 +1,32 @@
+Command Migrasi
+
+1. Membuat migration baru:
+
+go run cmd/migration/main.go create create_users_table
+
+Ini akan membuat 2 file di internal/database/migrations/:
+000001_create_users_table.up.sql (untuk membuat table)
+000001_create_users_table.down.sql (untuk rollback)
+
+2. Menjalankan semua pending migrations:
+
+go run cmd/migration/main.go migrate
+
+Jalankan semua .up.sql yang belum dijalankan
+Akan merekam di tabel migrations yang sudah dijalankan
+Migrasi yang sudah ada akan diskip otomatis
+
+3. Rollback migration terakhir:
+
+go run cmd/migration/main.go down
+
+Jalankan .down.sql dari migrasi terakhir
+Hapus recordnya dari tabel migrations
+
+4. Drop semua table di database:
+
+go run cmd/migration/main.go drop
+
+Menghapus semua table di database (CASCADE)
+Berguna untuk reset database dari awal
+Setelah ini, jalankan "migrate" untuk recreate semua tables

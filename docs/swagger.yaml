@@ -1,0 +1,843 @@
+basePath: /api
+definitions:
+  dto.AskGeminiRequest:
+    properties:
+      prompt:
+        type: string
+    required:
+    - prompt
+    type: object
+  dto.ChangePasswordRequest:
+    properties:
+      current_password:
+        type: string
+      new_password:
+        minLength: 8
+        type: string
+    required:
+    - current_password
+    - new_password
+    type: object
+  dto.CreateUserRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  dto.DeleteFileRequest:
+    properties:
+      file_name:
+        description: |-
+          FileName menerima nama file, path lengkap, maupun URL CDN penuh hasil upload.
+          Bila berupa URL penuh, Folder diabaikan karena URL sudah memuat path lengkap.
+        type: string
+      folder:
+        type: string
+    required:
+    - file_name
+    type: object
+  dto.GenerateImageRequest:
+    properties:
+      model:
+        type: string
+      prompt:
+        type: string
+    required:
+    - prompt
+    type: object
+  dto.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  dto.LoginResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+    type: object
+  dto.RefreshTokenRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  dto.RefreshTokenResponse:
+    properties:
+      access_token:
+        type: string
+    type: object
+  dto.RegisterRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  dto.RegisterResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+    type: object
+  dto.UpdateProfileRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+    type: object
+  dto.UpdateUserRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        minLength: 8
+        type: string
+    type: object
+  helper.DataResponse:
+    properties:
+      data: {}
+      message:
+        type: string
+    type: object
+  helper.ErrorResponse:
+    properties:
+      errors:
+        additionalProperties:
+          type: string
+        type: object
+      message:
+        type: string
+    type: object
+  helper.MessageResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  helper.Meta:
+    properties:
+      from:
+        type: integer
+      page:
+        type: integer
+      per_page:
+        type: integer
+      to:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  helper.PaginatedResponse:
+    properties:
+      data: {}
+      message:
+        type: string
+      meta:
+        $ref: '#/definitions/helper.Meta'
+    type: object
+  model.LogEntry:
+    properties:
+      error:
+        type: string
+      level:
+        type: string
+      module:
+        type: string
+      msg:
+        type: string
+      path:
+        type: string
+      time:
+        type: string
+      user_id:
+        type: string
+    type: object
+  model.LogFile:
+    properties:
+      file_name:
+        type: string
+      size:
+        type: integer
+    type: object
+  model.UserSummary:
+    properties:
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: By Fardan Maula Azizi
+  title: Gin Golang Layered Architecture Template
+  version: "1.0"
+paths:
+  /api/auth/login:
+    post:
+      description: Authenticate user with email and password to get access and refresh
+        tokens
+      parameters:
+      - description: User credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/helper.DataResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.LoginResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/helper.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/helper.ErrorResponse'
+      summary: Login
+      tags:
+      - Auth
+  /api/auth/logout:
+    post:
+      description: Revoke the given refresh token so it can no longer be used
+      parameters:
+      - description: Refresh token to revoke
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/helper.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/helper.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/helper.MessageResponse'
+      security:
+      - BearerAuth: []
+      summary: Logout
+      tags:
+      - Auth
+  /api/auth/me:
+    get:
+      description: Get current user profile information
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/helper.DataResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.UserSummary'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/helper.MessageResponse'
+      security:
+      - BearerAuth: []
+      summary: Me
+      tags:
+      - Auth
+  /api/auth/password:
+    put:
+      description: Change the password of the currently authenticated user after verifying
+        the old one
+      parameters:
+      - description: Password data
+        in: body
+        name: password
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/helper.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/helper.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/helper.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/helper.MessageResponse'
+      security:
+      - BearerAuth: []
+      summary: Edit Password
+      tags:
+      - Auth
+  /api/auth/profile:
+    put:
+      description: Update the name and/or email of the currently authenticated user
+        (at least one required)
+      parameters:
+      - description: Profile data
+        in: body
+        name: profile
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/helper.DataResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.UserSummary'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/helper.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/helper.MessageResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/helper.MessageResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/helper.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Edit Profile
+      tags:
+      - Auth
+  /api/auth/refresh:
+    post:
+      description: Exchange a valid refresh token for a new access token
+      parameters:
+      - description: Refresh token
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/helper.DataResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.RefreshTokenResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/helper.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/helper.MessageResponse'
+      summary: Refresh
+      tags:
+      - Auth
+  /api/auth/register:
+    post:
+      description: Register a new user account and get access and refresh tokens
+      parameters:
+      - description: New user account
+        in: body
+        name: account
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/helper.DataResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.RegisterResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/helper.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/helper.ErrorResponse'
+      summary: Register
+      tags:
+      - Auth
+  /api/health:
+    get:
+      description: Check API health status
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/helper.MessageResponse'
+      summary: Health Check
+      tags:
+      - Health
+  /api/users:
+    get:
+      description: Get paginated list of users with search, filter, and sort
+      parameters:
+      - description: Search across id, name, and email
+        in: query
+        name: search_global
+        type: string
+      - description: Filter by name
+        in: query
+        name: name
+        type: string
+      - description: Filter by email
+        in: query
+        name: email
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page (max 100)
+        in: query
+        name: per_page
+        type: integer
+      - description: Sort column
+        enum:
+        - id
+        - name
+        - email
+        in: query
+        name: sort_by
+        type: string
+      - description: Sort direction
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_dir
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/helper.PaginatedResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.UserSummary'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/helper.MessageResponse'
+      summary: List Users
+      tags:
+      - Users
+    post:
+      description: Create new user
+      parameters:
+      - description: User data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/helper.DataResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.UserSummary'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/helper.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/helper.ErrorResponse'
+      summary: Create User
+      tags:
+      - Users
+  /api/users/{id}:
+    delete:
+      description: Delete user by ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/helper.MessageResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/helper.MessageResponse'
+      summary: Delete User
+      tags:
+      - Users
+    get:
+      description: Get user by ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/helper.DataResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.UserSummary'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/helper.MessageResponse'
+      summary: Get User by ID
+      tags:
+      - Users
+    put:
+      description: Update existing user by ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: User data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/helper.DataResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.UserSummary'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/helper.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/helper.MessageResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/helper.ErrorResponse'
+      summary: Update User
+      tags:
+      - Users
+  /chatbot/ask:
+    post:
+      consumes:
+      - multipart/form-data
+      - application/json
+      description: Mengirim prompt ke Gemini dengan dukungan upload dokumen/gambar
+      parameters:
+      - description: Chat prompt (gunakan untuk multipart/form-data)
+        in: formData
+        name: prompt
+        type: string
+      - description: Model name
+        in: formData
+        name: model
+        type: string
+      - description: Dokumen atau gambar (opsional)
+        in: formData
+        name: file
+        type: file
+      - description: Chat request (gunakan untuk application/json)
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/dto.AskGeminiRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/helper.DataResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/helper.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/helper.MessageResponse'
+      summary: Chat dengan Gemini
+      tags:
+      - Chatbot
+  /chatbot/generate-image:
+    post:
+      consumes:
+      - multipart/form-data
+      - application/json
+      description: Generate gambar berdasarkan prompt dengan dukungan upload dokumen/gambar
+        opsional
+      parameters:
+      - description: Image generation prompt (gunakan untuk multipart/form-data)
+        in: formData
+        name: prompt
+        type: string
+      - description: Model name
+        in: formData
+        name: model
+        type: string
+      - description: Dokumen atau gambar untuk referensi (opsional)
+        in: formData
+        name: file
+        type: file
+      - description: Image Generation Request (gunakan untuk application/json)
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/dto.GenerateImageRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/helper.DataResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/helper.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/helper.MessageResponse'
+      summary: Generate Image dengan Gemini
+      tags:
+      - Chatbot
+  /files:
+    delete:
+      consumes:
+      - application/json
+      description: Menghapus file dari Bunny Storage. Folder bersifat dinamis, atau
+        kirim path lengkap maupun URL CDN penuh pada file_name
+      parameters:
+      - description: Data file yang akan dihapus
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.DeleteFileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/helper.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/helper.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/helper.MessageResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/helper.MessageResponse'
+      summary: Hapus file dari Bunny Storage
+      tags:
+      - Bunny
+    post:
+      consumes:
+      - multipart/form-data
+      description: Mengunggah file ke Bunny Storage. Folder bersifat dinamis dan boleh
+        bertingkat, misalnya "users/avatars"
+      parameters:
+      - description: File yang akan diunggah
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: 'Folder tujuan, boleh bertingkat (contoh: users/avatars)'
+        in: formData
+        name: folder
+        type: string
+      - description: Nama file tujuan, default memakai nama file asli
+        in: formData
+        name: file_name
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/helper.DataResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/helper.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/helper.MessageResponse'
+      summary: Upload file ke Bunny Storage
+      tags:
+      - Bunny
+  /logs:
+    get:
+      description: Retrieve list of all log files with their sizes
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/helper.DataResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.LogFile'
+                  type: array
+              type: object
+      summary: Get All Log Files
+      tags:
+      - Logs
+  /logs/{file_name}:
+    get:
+      description: Retrieve all log entries from a specific log file
+      parameters:
+      - description: Log file name (without .log extension)
+        in: path
+        name: file_name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/helper.DataResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.LogEntry'
+                  type: array
+              type: object
+      summary: Get Log by File Name
+      tags:
+      - Logs
+securityDefinitions:
+  BearerAuth:
+    description: Ketik "Bearer" diikuti spasi dan access token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
