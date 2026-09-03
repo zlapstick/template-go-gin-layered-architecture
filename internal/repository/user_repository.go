@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"go-gin-layered-architecture/internal/model"
 	"strings"
+
+	"github.com/lib/pq"
 )
 
 type UserRepository struct {
@@ -95,7 +97,8 @@ func (r *UserRepository) GetById(ctx context.Context, id string) (model.UserSumm
 	query := "SELECT id, name, email FROM users WHERE id = $1 AND deleted_at IS NULL"
 	err := r.db.QueryRowContext(ctx, query, id).Scan(&u.ID, &u.Name, &u.Email)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		var pqErr *pq.Error
+		if errors.Is(err, sql.ErrNoRows) || (errors.As(err, &pqErr) && pqErr.Code == "22P02") {
 			return u, model.ErrUserNotFound
 		}
 		return u, fmt.Errorf("query user: %w", err)
@@ -141,7 +144,8 @@ func (r *UserRepository) Update(ctx context.Context, id string, user *model.User
 
 	err := r.db.QueryRowContext(ctx, query, args...).Scan(&user.ID, &user.Name, &user.Email)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		var pqErr *pq.Error
+		if errors.Is(err, sql.ErrNoRows) || (errors.As(err, &pqErr) && pqErr.Code == "22P02") {
 			return model.ErrUserNotFound
 		}
 		return fmt.Errorf("update user: %w", err)
@@ -151,8 +155,21 @@ func (r *UserRepository) Update(ctx context.Context, id string, user *model.User
 
 func (r *UserRepository) Delete(ctx context.Context, id string) error {
 	query := "UPDATE users SET deleted_at = NOW(), updated_at = NOW(), email = email || '--trashed--' || id WHERE id = $1 AND deleted_at IS NULL"
-	if _, err := r.db.ExecContext(ctx, query, id); err != nil {
+
+	result, err := r.db.ExecContext(ctx, query, id)
+	if err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == "22P02" {
+			return model.ErrUserNotFound
+		}
 		return fmt.Errorf("delete user: %w", err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("delete user: %w", err)
+	}
+	if affected == 0 {
+		return model.ErrUserNotFound
 	}
 	return nil
 }
@@ -175,7 +192,8 @@ func (r *UserRepository) FindById(ctx context.Context, id string) (model.User, e
 	query := "SELECT id, name, email, password, role FROM users WHERE id = $1 AND deleted_at IS NULL"
 	err := r.db.QueryRowContext(ctx, query, id).Scan(&user.ID, &user.Name, &user.Email, &user.Password, &user.Role)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		var pqErr *pq.Error
+		if errors.Is(err, sql.ErrNoRows) || (errors.As(err, &pqErr) && pqErr.Code == "22P02") {
 			return user, model.ErrUserNotFound
 		}
 		return user, fmt.Errorf("query user: %w", err)
